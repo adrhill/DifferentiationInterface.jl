@@ -3,16 +3,20 @@ module DifferentiationInterfaceForwardDiffExt
 using DifferentiationInterface
 using DocStringExtensions
 using ForwardDiff
+using ForwardDiff: Dual, Tag, extract_derivative, extract_derivative!
 using LinearAlgebra
 
 """
 $(TYPEDSIGNATURES)
 """
 function DifferentiationInterface.pushforward!(
-    dy::Y, ::ForwardDiffBackend, f, x::X, dx::X
+    _dy::Y, ::ForwardDiffBackend, f, x::X, dx::X
 ) where {X<:Real,Y<:Real}
-    new_dy = ForwardDiff.derivative(f, x) * dx
-    return new_dy
+    T = typeof(Tag(f, X))
+    xdual = Dual{T}(x, dx)
+    ydual = f(xdual)
+    dy = extract_derivative(T, ydual)
+    return dy
 end
 
 """
@@ -21,8 +25,10 @@ $(TYPEDSIGNATURES)
 function DifferentiationInterface.pushforward!(
     dy::Y, ::ForwardDiffBackend, f, x::X, dx::X
 ) where {X<:Real,Y<:AbstractArray}
-    ForwardDiff.derivative!(dy, f, x)
-    dy .*= dx
+    T = typeof(Tag(f, X))
+    xdual = Dual{T}(x, dx)
+    ydual = f(xdual)
+    dy = extract_derivative!(T, dy, ydual)
     return dy
 end
 
